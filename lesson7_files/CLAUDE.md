@@ -17,11 +17,12 @@ deactivate
 
 Always activate the venv before running notebooks, scripts, or installing packages. Always call `deactivate` when processing is complete to close the environment.
 
-## Running the Notebook
+## Running the Notebooks
 
 ```bash
 source .venv/bin/activate
-jupyter notebook EDA.ipynb
+jupyter notebook EDA_Refactored.ipynb   # refactored, modular version (preferred)
+jupyter notebook EDA.ipynb              # original single-file analysis
 deactivate
 ```
 
@@ -40,15 +41,16 @@ Six CSV files make up the dataset:
 
 Order statuses: `delivered`, `shipped`, `canceled`, `processing`, `pending`, `returned`. Most analyses filter to `delivered` only (~93.6% of 2023 orders).
 
+## Module Architecture
+
+Three Python files work together:
+
+| File | Role |
+|---|---|
+| `data_loader.py` | `EcommerceDataLoader` — loads all 6 CSVs, merges them, parses datetimes, computes `delivery_days`/`purchase_year`/`purchase_month`. Use `create_sales_dataset(year_filter, month_filter, status_filter)` to get a filtered working dataset. |
+| `business_metrics.py` | Pure calculation functions (`calculate_revenue_metrics`, `calculate_product_metrics`, `calculate_geographic_metrics`, `calculate_delivery_metrics`, `calculate_review_distribution`) plus matching `plot_*` functions for each. No side effects — all functions return DataFrames, dicts, or figures. |
+| `EDA_Refactored.ipynb` | Calls the two modules above. All analysis parameters (`ANALYSIS_YEAR`, `COMPARISON_YEAR`, `ANALYSIS_MONTH`, `ORDER_STATUS`) live in a single config cell at the top. |
+
 ## Notebook: `EDA.ipynb`
 
-The notebook answers four business questions for 2023 vs 2022, all working from a `sales_delivered` DataFrame (merged `order_items` + `orders`, filtered to `status == 'delivered'`):
-
-1. **Revenue comparison** — total 2023 revenue ($3.36M), YoY growth (−2.46%)
-2. **Month-over-month growth** — `pct_change()` on monthly grouped revenue; avg MoM growth −0.39%
-3. **Top product categories** — merge with `products` on `product_id`, group by `product_category_name`
-4. **Sales by state** — chain merge: `sales_delivered_2023 → orders → customers`, group by `customer_state`, visualized as a Plotly USA choropleth
-
-Additional metrics computed: average order value ($724.98), total orders (4,635), delivery speed (avg 8 days), review score by delivery bucket (`1-3 days`, `4-7 days`, `8+ days`), overall avg review score (4.10/5).
-
-**Known warnings**: The notebook uses chained assignment on `sales_delivered` slices, triggering `SettingWithCopyWarning`. Use `.loc[]` or reassign with `.copy()` when modifying columns on filtered DataFrames.
+Original single-file notebook. Answers four business questions for 2023 vs 2022 using inline pandas merges and plots. Kept for reference. Known issue: uses chained assignment on filtered slices, producing `SettingWithCopyWarning`.
